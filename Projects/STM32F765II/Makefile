@@ -39,26 +39,22 @@ OBJS += ../../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr_ex.o \
 DEBUG_FLAGS	?= -ggdb3
 FP_FLAGS	?= -mfloat-abi=hard -mfpu=fpv5-sp-d16
 
-export FLAGS		 = -std=gnu99 \
-			   -Os \
-			   -g \
-			   -Wundef \
-			   -Wall \
-			   -fno-builtin \
-			   -ffunction-sections \
-			   -nostartfiles \
-			   -lnosys \
-			   -Wl,-gc-sections \
-			   -Werror \
-#			   -TSTM32F767ZITx_FLASH.ld
+FLAGS		= -std=gnu99 \
+		-Os \
+		-g \
+		-Wundef \
+		-Wall \
+		-fno-builtin \
+		-ffunction-sections \
+		-nostartfiles \
+		-lnosys \
+		-Wl,-gc-sections \
+		-Werror \
+		-TSTM32F767ZITx_FLASH.ld
 # $(FP_FLAGS)
 FLAGS += -mthumb -mcpu=cortex-m7 -mfpu=fpv5-sp-d16 $(DEBUG_FLAGS)
 
 all:IO_Toggle.bin
-
-clean:
-	rm -rf $(OBJS) IO_Toggle.*
-.PHONY: clean
 
 IO_Toggle.bin:IO_Toggle.elf
 	$(OBJCOPY) -O binary $< $@
@@ -70,4 +66,8 @@ IO_Toggle.elf:$(OBJS)
 	$(CC) $(CFLAGS) $(FLAGS) $(DEFS) $(INCS) -TSTM32F767ZITx_FLASH.ld -c $< -o $@
 %.o:%.c
 	$(CC) $(CFLAGS) $(FLAGS) $(DEFS) $(INCS) -TSTM32F767ZITx_FLASH.ld -c $< -o $@
+
+.PHONY: clean
+clean:
+	rm -rf $(OBJS) IO_Toggle.*
 
