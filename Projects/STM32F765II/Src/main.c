@@ -83,8 +83,7 @@ int main(void)
      */
   HAL_Init();
 
-  /* Configure the system clock to 216 MHz */
-  SystemClock_Config();
+
   
   /* -1- Enable GPIO Clock (to be able to program the configuration registers) */
   __HAL_RCC_GPIOC_CLK_ENABLE();
@@ -104,6 +103,8 @@ int main(void)
     /* Insert delay 100 ms */
     HAL_Delay(100);
   }
+  /* Configure the system clock to 216 MHz */
+  SystemClock_Config();
 }
 
 /**
