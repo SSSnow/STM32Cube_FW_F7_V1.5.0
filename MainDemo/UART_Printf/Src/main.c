@@ -1,11 +1,11 @@
 /**
   ******************************************************************************
-  * @file    GPIO/GPIO_IOToggle/Src/main.c
+  * @file    UART/UART_Printf/Src/main.c
   * @author  MCD Application Team
   * @version V1.0.1
   * @date    23-September-2016
-  * @brief   This example describes how to configure and use GPIOs through
-  *          the STM32F7xx HAL API.
+  * @brief   This example shows how to retarget the C library printf function
+  *          to the UART.
   ******************************************************************************
   * @attention
   *
@@ -43,7 +43,7 @@
   * @{
   */
 
-/** @addtogroup GPIO_IOToggle
+/** @addtogroup UART_Printf
   * @{
   */
 
@@ -52,10 +52,20 @@
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 static GPIO_InitTypeDef  GPIO_InitStruct;
+/* UART handler declaration */
+UART_HandleTypeDef UartHandle;
 
 /* Private function prototypes -----------------------------------------------*/
-static void SystemClock_Config(void);
-
+#ifdef __GNUC__
+/* With GCC/RAISONANCE, small printf (option LD Linker->Libraries->Small printf
+   set to 'Yes') calls __io_putchar() */
+#define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
+#else
+#define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
+#endif /* __GNUC__ */
+void SystemClock_Config(void);
+static void CPU_CACHE_Enable(void);
+static void Error_Handler(void);
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -66,10 +76,8 @@ static void SystemClock_Config(void);
   */
 int main(void)
 {
-  /* This sample code shows how to use GPIO HAL API to toggle GPIOB-GPIO_PIN_0 IO
-    in an infinite loop. It is possible to connect a LED between GPIOB-GPIO_PIN_0
-    output and ground via a 330ohm resistor to see this external LED blink.
-    Otherwise an oscilloscope can be used to see the output GPIO signal */
+  /* Enable the CPU Cache */
+  CPU_CACHE_Enable();
 
   /* STM32F7xx HAL library initialization:
        - Configure the Flash prefetch
@@ -85,25 +93,80 @@ int main(void)
 
   /* Configure the system clock to 216 MHz */
   SystemClock_Config();
-  
-  /* -1- Enable GPIO Clock (to be able to program the configuration registers) */
-  __HAL_RCC_GPIOC_CLK_ENABLE();
 
-  /* -2- Configure IO in output push-pull mode to drive external LEDs */
+	__HAL_RCC_GPIOB_CLK_ENABLE();
+	__HAL_RCC_GPIOC_CLK_ENABLE();
+
+/* -2- Configure IO in output push-pull mode to drive external LEDs */
   GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull  = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
 
-  GPIO_InitStruct.Pin = GPIO_PIN_6 | GPIO_PIN_7;
+  GPIO_InitStruct.Pin = GPIO_PIN_6;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = GPIO_PIN_7;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = GPIO_PIN_1;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /* -3- Toggle IO in an infinite loop */
+//  /* Initialize BSP Led for LED3 */
+//  BSP_LED_Init(LED3);
+
+  /*##-1- Configure the UART peripheral ######################################*/
+  /* Put the USART peripheral in the Asynchronous mode (UART Mode) */
+  /* UART configured as follows:
+      - Word Length = 8 Bits (7 data bit + 1 parity bit) : 
+	                  BE CAREFUL : Program 7 data bits + 1 parity bit in PC HyperTerminal
+      - Stop Bit    = One Stop bit
+      - Parity      = ODD parity
+      - BaudRate    = 115200 baud
+      - Hardware flow control disabled (RTS and CTS signals) */
+  UartHandle.Instance        = USARTx;
+
+  UartHandle.Init.BaudRate   = 115200;
+  UartHandle.Init.WordLength = UART_WORDLENGTH_8B;
+  UartHandle.Init.StopBits   = UART_STOPBITS_1;
+  UartHandle.Init.Parity     = UART_PARITY_NONE;
+  UartHandle.Init.HwFlowCtl  = UART_HWCONTROL_NONE;
+  UartHandle.Init.Mode       = UART_MODE_TX_RX;
+  UartHandle.Init.OverSampling = UART_OVERSAMPLING_16;
+//  HAL_UART_MspInit(&UartHandle);
+  if (HAL_UART_Init(&UartHandle) != HAL_OK)
+  {
+    /* Initialization Error */
+    Error_Handler();
+  }
+
+  /* Output a message on Hyperterminal using printf function */
+  printf("\n\r UART Printf Example: retarget the C library printf function to the UART\n\r");
+  printf("** Test finished successfully. ** \n\r");
+
+  /* Infinite loop */
   while (1)
   {
-    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6 | GPIO_PIN_7);
-    /* Insert delay 100 ms */
-    HAL_Delay(100);
+	HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_7);
+	HAL_Delay(200);
+	HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
+	HAL_Delay(200);
+	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_1);
+	HAL_Delay(200);
+	  printf("** Test finished successfully. ** \n\r");
+	  HAL_Delay(200);
   }
+}
+
+/**
+  * @brief  Retargets the C library printf function to the USART.
+  * @param  None
+  * @retval None
+  */
+PUTCHAR_PROTOTYPE
+{
+  /* Place your implementation of fputc here */
+  /* e.g. write a character to the USART3 and Loop until the end of transmission */
+  HAL_UART_Transmit(&UartHandle, (uint8_t *)&ch, 1, 0xFFFF);
+
+  return ch;
 }
 
 /**
@@ -116,7 +179,7 @@ int main(void)
   *            APB1 Prescaler                 = 4
   *            APB2 Prescaler                 = 2
   *            HSE Frequency(Hz)              = 16000000
-  *            PLL_M                          = 16
+  *            PLL_M                          = 8
   *            PLL_N                          = 432
   *            PLL_P                          = 2
   *            PLL_Q                          = 9
@@ -127,7 +190,7 @@ int main(void)
   * @param  None
   * @retval None
   */
-static void SystemClock_Config(void)
+void SystemClock_Config(void)
 {
   RCC_ClkInitTypeDef RCC_ClkInitStruct;
   RCC_OscInitTypeDef RCC_OscInitStruct;
@@ -167,9 +230,38 @@ static void SystemClock_Config(void)
     while(1) {};
   }
 }
+/**
+* @brief  CPU L1-Cache enable.
+* @param  None
+* @retval None
+*/
+static void CPU_CACHE_Enable(void)
+{
+  /* Enable I-Cache */
+  SCB_EnableICache();
+
+  /* Enable D-Cache */
+  SCB_EnableDCache();
+}
+
+/**
+  * @brief  This function is executed in case of error occurrence.
+  * @param  None
+  * @retval None
+  */
+static void Error_Handler(void)
+{
+//  /* Turn LED3 on */
+//  BSP_LED_On(LED3);
+	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET);
+  while (1)
+  {
+  }
+}
 
 #ifdef  USE_FULL_ASSERT
-
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.
