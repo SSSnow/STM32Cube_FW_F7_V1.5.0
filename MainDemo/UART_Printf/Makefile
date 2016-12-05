@@ -29,8 +29,8 @@ INCS +=		-IInc/ \
 		-I../../Drivers/CMSIS/Include \
 		-I../../Drivers/CMSIS/Device/Include/
 
-LIBPATH +=      -L../../Drivers/CMSIS/Lib/
-LIBS +=         -l../../Drivers/CMSIS/Lib/libarm_cortexM7lfsp_math.a
+#LIBPATH +=      -L../../Drivers/CMSIS/Lib/
+#LIBS +=         -l../../Drivers/CMSIS/Lib/libarm_cortexM7lfdp_math.a
 
 OBJS += startup_stm32f765xx.o
 OBJS += Src/main.o Src/stm32f7xx_it.o Src/system_stm32f7xx.o Src/stm32f7xx_hal_msp.o
@@ -49,37 +49,40 @@ OBJS += ../../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr_ex.o \
 
 DEBUG_FLAGS	?= -ggdb3
 FP_FLAGS	?= -mfloat-abi=soft -mfpu=fpv5-sp-d16
-#arm-none-eabi-gcc --specs=rdimon.specs   -Wl,--start-group -lgcc -lc -lm -lrdimon -Wl,--end-group -o test test.c
+#--specs=rdimon.specs   -Wl,--start-group -lgcc -lc -lm -lrdimon -Wl,--end-group -o test test.c
 FLAGS		= -std=gnu99 \
-		-Os \
-		-g \
-		-Wundef \
-		-Wall \
-		-fno-builtin \
+		-Os -g \
+		-Wundef -Wall -Wimplicit-function-declaration \
+#                -Wextra -Wredundant-decls \
+#                -Wredundant-decls -Wmissing-prototypes -Wstrict-prototypes \
+		-Wshadow -fno-builtin -fdata-sections -MD \
 		-ffunction-sections \
-                --specs=rdimon.specs \
-                -Wl,--start-group -lgcc -lc -lm -lrdimon -Wl,--end-group \
+#                --specs=rdimon.specs -lgcc -lc -lm -lrdimon \
+#                -Wl,--start-group -lgcc -lc -lm -lrdimon -Wl,--end-group \
 		-nostartfiles \
 		-lnosys \
 		-Wl,-gc-sections \
-		-Werror
+		-Werror $(EXTRAFLAGS)
 # $(FP_FLAGS)
 FLAGS += -mthumb -mcpu=cortex-m7 $(DEBUG_FLAGS) $(FP_FLAGS)
 LFLAGS += -mthumb -mcpu=cortex-m7
+
+LibStdFLAG := -lgcc -lc -lm -lrdimon
 
 all:$(TGT_BIN)
 
 $(TGT_BIN):$(TGT_ELF)
 	$(OBJCOPY) -O binary -S $< $@
-
+#
 $(TGT_ELF):$(OBJS)
-	@$(CC) $(LFALGS) $^ -T$(LinkFile) -o $@
+	@$(CC) $(LFALGS) $^ -T$(LinkFile) $(LibStdFLAG) -o $@
 	$(SIZE) $@
 %.o:%.S
 	@$(CC) $(FLAGS) -c $< -o $@
+# $(LIBPATH) $(LIBS)
 %.o:%.c
 	@printf "  CC      $(<F)\n"
-	@$(CC) $(FLAGS) $(DEFS) $(INCS) $(LIBPATH) $(LIBS) -c $< -o $@
+	@$(CC) $(FLAGS) $(DEFS) $(INCS) -c $< -o $@
 
 clean:
 	rm -rf $(OBJS) $(Project).*

@@ -56,13 +56,13 @@ static GPIO_InitTypeDef  GPIO_InitStruct;
 UART_HandleTypeDef UartHandle;
 
 /* Private function prototypes -----------------------------------------------*/
-#ifdef __GNUC__
+//#ifdef __GNUC__
 /* With GCC/RAISONANCE, small printf (option LD Linker->Libraries->Small printf
    set to 'Yes') calls __io_putchar() */
 #define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
-#else
-#define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
-#endif /* __GNUC__ */
+//#else
+//#define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
+//#endif /* __GNUC__ */
 void SystemClock_Config(void);
 static void CPU_CACHE_Enable(void);
 static void Error_Handler(void);
@@ -284,10 +284,7 @@ void assert_failed(uint8_t *file, uint32_t line)
 /**
   * @}
   */
-void _exit(int status)
-{
-(void)status;
-}
+
 /**
   * @}
   */
