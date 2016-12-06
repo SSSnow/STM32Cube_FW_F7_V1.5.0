@@ -8,17 +8,21 @@ vpath %.h Inc/ \
 ../../Drivers/CMSIS/Include \
 ../../Drivers/CMSIS/Device/Include/
 
-vpath %.a ../../Drivers/CMSIS/Lib
+#vpath %.a ../../Drivers/CMSIS/Lib
 
-CC	 	 = arm-none-eabi-gcc
-OBJCOPY		 = arm-none-eabi-objcopy
-SIZE		 = arm-none-eabi-size
+CROSS_COMPILE    = arm-none-eabi
+
+CC	 	 = $(CROSS_COMPILE)-gcc
+#LD               = $(CROSS_COMPILE)-ld -v
+OD               = $(CROSS_COMPILE)-objdump
+CP               = $(CROSS_COMPILE)-objcopy
+SZ               = $(CROSS_COMPILE)-size
 
 Project := UART_Printf
 TGT_ELF := $(Project).elf
 TGT_BIN := $(Project).bin
 
-LinkFile := STM32F765IIKx_FLASH.ld
+LDFILE := STM32F765IIKx_FLASH.ld
 
 DEFS = -DUSE_HAL_DRIVER -DSTM32F765xx
 
@@ -51,33 +55,37 @@ DEBUG_FLAGS	?= -ggdb3
 FP_FLAGS	?= -mfloat-abi=soft -mfpu=fpv5-sp-d16
 #--specs=rdimon.specs   -Wl,--start-group -lgcc -lc -lm -lrdimon -Wl,--end-group -o test test.c
 FLAGS		= -std=gnu99 \
-		-Os -g \
+		-Os -g -MMD \
 		-Wundef -Wall -Wimplicit-function-declaration \
 #                -Wextra -Wredundant-decls \
 #                -Wredundant-decls -Wmissing-prototypes -Wstrict-prototypes \
 		-Wshadow -fno-builtin -fdata-sections -MD \
 		-ffunction-sections \
-#                --specs=rdimon.specs -lgcc -lc -lm -lrdimon \
+                --specs=rdimon.specs \
 #                -Wl,--start-group -lgcc -lc -lm -lrdimon -Wl,--end-group \
-		-nostartfiles \
-		-lnosys \
-		-Wl,-gc-sections \
-		-Werror $(EXTRAFLAGS)
+                -nostartfiles \
+                -lnosys \
+                -Wl,-gc-sections \
+                -Werror $(EXTRAFLAGS)
 # $(FP_FLAGS)
 FLAGS += -mthumb -mcpu=cortex-m7 $(DEBUG_FLAGS) $(FP_FLAGS)
 LFLAGS += -mthumb -mcpu=cortex-m7
-
-LibStdFLAG := -lgcc -lc -lm -lrdimon
+#-Wl,--gc-sections 
+LDFLAGS := -lgcc -lc -lm -lrdimon
 
 all:$(TGT_BIN)
 
 $(TGT_BIN):$(TGT_ELF)
-	$(OBJCOPY) -O binary -S $< $@
+	@printf "generate binary...\n"
+	@$(CP) -O binary -S $< $@
+	@printf "sizeof  $(^F):\n"
+	@$(SZ) $^
 #
 $(TGT_ELF):$(OBJS)
-	@$(CC) $(LFALGS) $^ -T$(LinkFile) $(LibStdFLAG) -o $@
-	$(SIZE) $@
+	@printf "  CC      $(<F)\n"
+	@$(CC) $^ $(LFALGS) -T$(LDFILE) $(LDFLAGS) -o $@
 %.o:%.S
+	@printf "  CC      $(<F)\n"
 	@$(CC) $(FLAGS) -c $< -o $@
 # $(LIBPATH) $(LIBS)
 %.o:%.c
