@@ -92,8 +92,9 @@ $(TGT_ELF):$(OBJS)
 	@printf "  CC      $(<F)\n"
 	@$(CC) $(FLAGS) $(DEFS) $(INCS) -c $< -o $@
 
+dOBJS := $(OBJS:.o=.d)
 clean:
-	rm -rf $(OBJS) $(Project).*
+	rm -rf $(OBJS) $(dOBJS) $(Project).*
 
 .PHONY: clean all
 
